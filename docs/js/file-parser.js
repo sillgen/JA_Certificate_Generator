@@ -102,32 +102,110 @@ class FileParser {
     }
 
     /**
-     * Parse DOCX file (simplified - would need a proper DOCX parser in production)
+     * Parse DOCX file using mammoth.js
      * @param {File} file 
      * @returns {Promise<string[]>}
      */
     async parseDocxFile(file) {
-        // For now, we'll show a message that DOCX files need to be converted
-        // In a full implementation, you'd use a library like docx-preview or mammoth.js
-        throw new Error('DOCX files are not yet supported. Please convert to TXT or CSV format.');
+        try {
+            if (!window.mammoth) {
+                throw new Error('DOCX parser not available. Please convert to TXT or CSV format.');
+            }
+
+            // Convert file to array buffer
+            const arrayBuffer = await this.readFileAsArrayBuffer(file);
+            
+            // Extract text from DOCX
+            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            
+            if (result.messages && result.messages.length > 0) {
+                console.warn('DOCX parsing warnings:', result.messages);
+            }
+            
+            if (!result.value || result.value.trim().length === 0) {
+                throw new Error('No text content found in DOCX file');
+            }
+
+            return this.extractNamesFromText(result.value);
+            
+        } catch (error) {
+            console.error('Error parsing DOCX file:', error);
+            throw new Error(`Failed to parse DOCX file: ${error.message}. Please try converting to TXT or CSV format.`);
+        }
     }
 
     /**
-     * Parse XLSX file (simplified)
+     * Parse XLSX file using SheetJS
      * @param {File} file 
      * @returns {Promise<string[]>}
      */
     async parseXlsxFile(file) {
-        throw new Error('XLSX files are not yet supported. Please convert to CSV format.');
+        try {
+            if (!window.XLSX) {
+                throw new Error('XLSX parser not available. Please convert to CSV format.');
+            }
+
+            // Convert file to array buffer
+            const arrayBuffer = await this.readFileAsArrayBuffer(file);
+            
+            // Parse the workbook
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            
+            // Get the first worksheet
+            const firstSheetName = workbook.SheetNames[0];
+            if (!firstSheetName) {
+                throw new Error('No worksheets found in XLSX file');
+            }
+            
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Convert to CSV format and then extract names
+            const csv = XLSX.utils.sheet_to_csv(worksheet);
+            
+            if (!csv || csv.trim().length === 0) {
+                throw new Error('No data found in XLSX worksheet');
+            }
+
+            // Use the CSV parser logic to extract names
+            const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
+            
+            const names = [];
+            for (const line of lines) {
+                // Skip lines that look like headers
+                if (this.isHeaderLine(line)) {
+                    continue;
+                }
+
+                // Split by common CSV delimiters
+                const cells = line.split(/[,;\t]/).map(cell => cell.trim().replace(/['"]/g, ''));
+                
+                // Look for names in each cell
+                for (const cell of cells) {
+                    const cellNames = this.extractNamesFromText(cell);
+                    names.push(...cellNames);
+                }
+            }
+
+            // If we didn't find names in cells, try parsing the whole text
+            if (names.length === 0) {
+                return this.extractNamesFromText(csv);
+            }
+
+            return [...new Set(names)]; // Remove duplicates
+            
+        } catch (error) {
+            console.error('Error parsing XLSX file:', error);
+            throw new Error(`Failed to parse XLSX file: ${error.message}. Please try converting to CSV format.`);
+        }
     }
 
     /**
-     * Parse PDF file (simplified)
+     * Parse PDF file (not implemented in web version)
      * @param {File} file 
      * @returns {Promise<string[]>}
      */
     async parsePdfFile(file) {
-        throw new Error('PDF files are not yet supported. Please convert to TXT format.');
+        throw new Error('PDF files are not supported in the web version. Please convert to TXT, CSV, DOCX, or XLSX format. You can copy the text from the PDF and save it as a TXT file.');
     }
 
     /**
@@ -141,6 +219,20 @@ class FileParser {
             reader.onload = (event) => resolve(event.target.result);
             reader.onerror = (error) => reject(error);
             reader.readAsText(file);
+        });
+    }
+
+    /**
+     * Read file content as array buffer
+     * @param {File} file 
+     * @returns {Promise<ArrayBuffer>}
+     */
+    readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => resolve(event.target.result);
+            reader.onerror = (error) => reject(error);
+            reader.readAsArrayBuffer(file);
         });
     }
 

@@ -51,6 +51,14 @@ Jane,Doe,5
 Michael,Johnson,5
 ```
 
+### Microsoft Word (.docx)
+Word documents containing student names in paragraphs or lists. The web interface will extract all text and parse student names automatically.
+
+### Microsoft Excel (.xlsx)
+Excel spreadsheets with student names in any column. The system will scan all cells and extract valid student names.
+
+**Note**: PDF files are not supported in the web version. Please convert PDF content to one of the supported formats above.
+
 ## 🎨 Certificate Customization
 
 The web interface allows you to customize:

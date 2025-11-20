@@ -136,6 +136,13 @@ body {
     color: #6c757d;
 }
 
+.upload-note {
+    font-size: 0.8rem;
+    color: #dc3545;
+    font-style: italic;
+    margin-top: 5px;
+}
+
 .sample-link {
     margin-top: 10px;
 }

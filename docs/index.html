@@ -24,11 +24,12 @@
                     <div class="form-section">
                         <h2><i class="fas fa-upload"></i> Student List</h2>
                         <div class="file-upload-area" id="fileUploadArea">
-                            <input type="file" id="studentFile" name="studentFile" accept=".txt,.csv,.docx,.xlsx,.pdf" hidden>
+                            <input type="file" id="studentFile" name="studentFile" accept=".txt,.csv,.docx,.xlsx" hidden>
                             <div class="upload-content">
                                 <i class="fas fa-cloud-upload-alt upload-icon"></i>
                                 <p class="upload-text">Click to upload or drag and drop your student list</p>
-                                <p class="upload-formats">Supported formats: TXT, CSV, DOCX, XLSX, PDF</p>
+                                <p class="upload-formats">Supported formats: TXT, CSV, DOCX, XLSX</p>
+                                <p class="upload-note">Note: PDF files are not yet supported in the web version</p>
                                 <p class="sample-link">
                                     <a href="assets/sample-students.txt" download class="sample-download">
                                         <i class="fas fa-download"></i> Download sample TXT file
@@ -179,6 +180,8 @@
     <!-- Required Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="js/file-parser.js"></script>
     <script src="js/certificate-generator.js"></script>
     <script src="js/print-manager.js"></script>
