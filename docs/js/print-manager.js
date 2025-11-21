@@ -10,8 +10,13 @@ class PrintManager {
         
         // Check if PDF-lib is available for combining PDFs
         this.canCombinePdfs = !!window.PDFLib;
+        console.log('PrintManager initialized - PDF combining available:', this.canCombinePdfs);
+        console.log('PrintManager version: 1.1 (Combined PDF implemented)');
+        
         if (!this.canCombinePdfs) {
             console.warn('PDF-lib not available - combined printing will be limited');
+        } else {
+            console.log('PDF-lib detected - combined printing fully supported');
         }
     }
 
@@ -272,6 +277,9 @@ class PrintManager {
      * @returns {Promise<boolean>}
      */
     async printAllCombined(certificates, progressCallback = null) {
+        console.log('printAllCombined called with', certificates.length, 'certificates');
+        console.log('PDF-lib available:', !!window.PDFLib);
+        
         try {
             // Show initial progress
             if (progressCallback) {
@@ -282,8 +290,10 @@ class PrintManager {
                 });
             }
             
+            console.log('About to call createCombinedPdf...');
             // Create a combined PDF with all certificates
             const combinedPdf = await this.createCombinedPdf(certificates, progressCallback);
+            console.log('createCombinedPdf completed successfully');
             
             // Show final progress
             if (progressCallback) {
@@ -310,6 +320,7 @@ class PrintManager {
             
         } catch (error) {
             console.error('Error printing combined certificates:', error);
+            console.error('Error stack:', error.stack);
             
             // Show user-friendly error with fallback option
             const errorMsg = `Error creating combined PDF: ${error.message}\n\n` +
