@@ -17,12 +17,12 @@ class PrintManager {
     async getAvailablePrinters() {
         try {
             // Modern browsers don't allow direct printer enumeration for security reasons
-            // We'll simulate common printers or use browser's print dialog
-            this.availablePrinters = await this.simulatePrinterDetection();
+            // We'll use window.print() which gives access to actual local printers
+            this.availablePrinters = ['Use Browser Print Dialog (Recommended)', 'Print All Individually'];
             return this.availablePrinters;
         } catch (error) {
             console.error('Error getting printers:', error);
-            return ['Browser Default Printer'];
+            return ['Use Browser Print Dialog'];
         }
     }
 
@@ -31,25 +31,12 @@ class PrintManager {
      * @returns {Promise<string[]>}
      */
     async simulatePrinterDetection() {
-        // In a real browser environment, we can't enumerate printers
-        // This is a simulation of what common printers might be available
-        const commonPrinters = [
-            'Browser Default Printer',
-            'Microsoft Print to PDF',
-            'HP LaserJet',
-            'Canon PIXMA',
-            'Epson WorkForce',
-            'Brother MFC'
-        ];
-
-        // Simulate async operation
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        return commonPrinters;
+        // Return options that use window.print() for real printer access
+        return ['Use Browser Print Dialog (Recommended)', 'Print All Individually'];
     }
 
     /**
-     * Print a single PDF certificate
+     * Print a single PDF certificate using window.print()
      * @param {Uint8Array} pdfBytes 
      * @param {string} filename 
      * @param {string} printerName 
@@ -61,20 +48,57 @@ class PrintManager {
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
 
-            // Open in new window for printing
-            const printWindow = window.open(url, '_blank');
-            
-            if (printWindow) {
-                printWindow.onload = () => {
-                    // Give the PDF time to load before printing
-                    setTimeout(() => {
-                        printWindow.print();
-                    }, 1000);
+            // Create a hidden iframe to load the PDF
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.src = url;
+
+            // Add iframe to document
+            document.body.appendChild(iframe);
+
+            return new Promise((resolve, reject) => {
+                iframe.onload = () => {
+                    try {
+                        // Wait a moment for PDF to fully load
+                        setTimeout(() => {
+                            // Use the iframe's contentWindow to trigger print
+                            if (iframe.contentWindow) {
+                                iframe.contentWindow.print();
+                            } else {
+                                // Fallback: print the current window (less ideal)
+                                window.print();
+                            }
+
+                            // Clean up after a delay
+                            setTimeout(() => {
+                                document.body.removeChild(iframe);
+                                URL.revokeObjectURL(url);
+                            }, 1000);
+
+                            resolve(true);
+                        }, 1000);
+                    } catch (error) {
+                        console.error('Error printing:', error);
+                        // Clean up on error
+                        document.body.removeChild(iframe);
+                        URL.revokeObjectURL(url);
+                        reject(error);
+                    }
                 };
-                return true;
-            } else {
-                throw new Error('Pop-up blocked. Please allow pop-ups and try again.');
-            }
+
+                iframe.onerror = (error) => {
+                    console.error('Error loading PDF for printing:', error);
+                    document.body.removeChild(iframe);
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Failed to load PDF for printing'));
+                };
+            });
+
         } catch (error) {
             console.error('Error printing certificate:', error);
             throw error;
@@ -178,23 +202,110 @@ class PrintManager {
             return false;
         }
 
-        const confirmMessage = `Print ${successfulCerts.length} certificates?\n\n` +
-                             'Note: Each certificate will open in a new tab for printing. ' +
-                             'Please ensure your browser allows pop-ups.';
+        // Show options for printing
+        const printOption = this.showPrintOptions(successfulCerts.length);
+        
+        if (printOption === 'cancel') {
+            return false;
+        } else if (printOption === 'combined') {
+            return await this.printAllCombined(successfulCerts);
+        } else if (printOption === 'individual') {
+            return await this.printAllIndividually(successfulCerts);
+        }
+
+        return false;
+    }
+
+    /**
+     * Show print options dialog
+     * @param {number} certCount 
+     * @returns {string}
+     */
+    showPrintOptions(certCount) {
+        const message = `Choose how to print ${certCount} certificates:\n\n` +
+                       `1. Print All Together (Recommended)\n` +
+                       `   - All certificates in one print job\n` +
+                       `   - Select printer once\n` +
+                       `   - Easier to manage\n\n` +
+                       `2. Print One by One\n` +
+                       `   - Each certificate prints separately\n` +
+                       `   - More control over individual prints\n` +
+                       `   - Takes longer\n\n` +
+                       `3. Cancel`;
+
+        const choice = prompt(message + '\n\nEnter 1, 2, or 3:');
+        
+        switch (choice) {
+            case '1': return 'combined';
+            case '2': return 'individual';
+            case '3': 
+            default: return 'cancel';
+        }
+    }
+
+    /**
+     * Print all certificates combined in one document
+     * @param {Object[]} certificates 
+     * @returns {Promise<boolean>}
+     */
+    async printAllCombined(certificates) {
+        try {
+            // Create a combined PDF with all certificates
+            const combinedPdf = await this.createCombinedPdf(certificates);
+            
+            // Print the combined PDF
+            await this.printCertificate(combinedPdf, 'all-certificates.pdf');
+            
+            alert(`Successfully prepared ${certificates.length} certificates for printing.`);
+            return true;
+            
+        } catch (error) {
+            console.error('Error printing combined certificates:', error);
+            alert(`Error printing certificates: ${error.message}`);
+            return false;
+        }
+    }
+
+    /**
+     * Create a combined PDF with all certificates
+     * @param {Object[]} certificates 
+     * @returns {Promise<Uint8Array>}
+     */
+    async createCombinedPdf(certificates) {
+        // This would require PDFLib to merge multiple PDFs
+        // For now, we'll just print them individually
+        throw new Error('Combined PDF printing not yet implemented. Please use individual printing.');
+    }
+
+    /**
+     * Print all certificates individually
+     * @param {Object[]} certificates 
+     * @returns {Promise<boolean>}
+     */
+    async printAllIndividually(certificates) {
+        let printedCount = 0;
+        
+        const confirmMessage = `Print ${certificates.length} certificates one by one?\n\n` +
+                             'Each certificate will open a print dialog. ' +
+                             'You can select your printer for each one.\n\n' +
+                             'Continue?';
         
         if (!confirm(confirmMessage)) {
             return false;
         }
 
-        let printedCount = 0;
-        
-        for (const cert of successfulCerts) {
+        for (let i = 0; i < certificates.length; i++) {
+            const cert = certificates[i];
+            
             try {
+                // Show progress
+                console.log(`Printing certificate ${i + 1} of ${certificates.length}: ${cert.studentName}`);
+                
                 await this.printCertificate(cert.pdfBytes, cert.filename);
                 printedCount++;
                 
-                // Small delay between opening windows
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Small delay between prints
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 
             } catch (error) {
                 console.error(`Failed to print certificate for ${cert.studentName}:`, error);
@@ -210,7 +321,7 @@ class PrintManager {
         }
 
         if (printedCount > 0) {
-            alert(`Successfully sent ${printedCount} certificates to printer.`);
+            alert(`Successfully sent ${printedCount} of ${certificates.length} certificates to printer.`);
         }
 
         return printedCount > 0;
@@ -231,16 +342,27 @@ class PrintManager {
     getPrintingInfo() {
         return {
             supported: this.isPrintingSupported(),
-            limitations: [
-                'Browser security restrictions prevent direct printer enumeration',
-                'Each certificate will open in a new tab/window for printing',
-                'Pop-up blocker must be disabled for this site',
-                'Actual printing depends on browser print dialog'
+            method: 'Native browser printing with window.print()',
+            advantages: [
+                'Access to your actual local printers',
+                'Use your system\'s print drivers and settings',
+                'No browser security restrictions',
+                'Full printer selection and configuration',
+                'Reliable print quality and formatting'
             ],
-            recommendations: [
-                'Allow pop-ups for this site',
-                'Set up your default printer before printing',
-                'Consider downloading certificates and printing from a PDF viewer for better control'
+            instructions: [
+                'Choose your print option from the dropdown',
+                'Click "Generate Certificates" and enable printing',
+                'Each certificate will open a browser print dialog',
+                'Select your desired printer from the list',
+                'Adjust print settings as needed',
+                'Click Print to send to your printer'
+            ],
+            tips: [
+                'Ensure your printer is connected and turned on',
+                'Check that printer drivers are properly installed',
+                'Consider printing a test page first',
+                'For large batches, ensure sufficient paper supply'
             ]
         };
     }

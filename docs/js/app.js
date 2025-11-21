@@ -65,10 +65,6 @@ class CertificateApp {
         const enablePrinting = document.getElementById('enablePrinting');
         enablePrinting.addEventListener('change', this.togglePrintSection.bind(this));
 
-        // Refresh printers
-        const refreshPrintersBtn = document.getElementById('refreshPrinters');
-        refreshPrintersBtn.addEventListener('click', this.loadPrinters.bind(this));
-
         // Preview button
         const previewBtn = document.getElementById('previewBtn');
         previewBtn.addEventListener('click', this.showPreview.bind(this));
@@ -114,31 +110,31 @@ class CertificateApp {
     }
 
     /**
-     * Load available printers
+     * Load available print options
      */
     async loadPrinters() {
         const printerSelect = document.getElementById('printerSelect');
-        printerSelect.innerHTML = '<option value="">Loading printers...</option>';
+        printerSelect.innerHTML = '<option value="">Loading print options...</option>';
 
         try {
-            const printers = await this.printManager.getAvailablePrinters();
+            const printOptions = await this.printManager.getAvailablePrinters();
             
-            printerSelect.innerHTML = '<option value="">Select a printer...</option>';
-            printers.forEach(printer => {
-                const option = document.createElement('option');
-                option.value = printer;
-                option.textContent = printer;
-                printerSelect.appendChild(option);
+            printerSelect.innerHTML = '<option value="">Select print method...</option>';
+            printOptions.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                printerSelect.appendChild(optionElement);
             });
 
-            // Select the first printer by default if available
-            if (printers.length > 0) {
-                printerSelect.value = printers[0];
+            // Select the first (recommended) option by default
+            if (printOptions.length > 0) {
+                printerSelect.value = printOptions[0];
             }
 
         } catch (error) {
-            console.error('Error loading printers:', error);
-            printerSelect.innerHTML = '<option value="">Error loading printers</option>';
+            console.error('Error loading print options:', error);
+            printerSelect.innerHTML = '<option value="">Error loading print options</option>';
         }
     }
 
@@ -475,10 +471,12 @@ class CertificateApp {
         try {
             const printInfo = this.printManager.getPrintingInfo();
             
-            const confirmMessage = `Print all certificates?\n\n` +
-                                 `Generated: ${this.generatedCertificates.filter(c => c.success).length} certificates\n\n` +
-                                 `Note: ${printInfo.limitations.join(' ')}\n\n` +
-                                 'Continue?';
+            const confirmMessage = `Ready to print ${this.generatedCertificates.filter(c => c.success).length} certificates!\n\n` +
+                                 `Using: ${printInfo.method}\n\n` +
+                                 `Benefits:\n` +
+                                 `• ${printInfo.advantages.join('\n• ')}\n\n` +
+                                 'Each certificate will open your browser\'s print dialog where you can select your printer.\n\n' +
+                                 'Continue with printing?';
 
             if (confirm(confirmMessage)) {
                 await this.printManager.printAllCertificates(this.generatedCertificates);

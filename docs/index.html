@@ -109,22 +109,27 @@
                             <input type="checkbox" id="enablePrinting" name="enablePrinting">
                             <label for="enablePrinting">
                                 <i class="fas fa-printer"></i>
-                                Enable printing after generation
+                                Print certificates after generation (uses your local printers)
                             </label>
                         </div>
 
                         <div id="printerSection" class="printer-section hidden">
+                            <div class="printer-info">
+                                <h4><i class="fas fa-info-circle"></i> Printing Information</h4>
+                                <p>✅ <strong>Direct access to your local printers</strong></p>
+                                <p>✅ <strong>Uses browser's native print dialog</strong></p>
+                                <p>✅ <strong>Full printer settings and options</strong></p>
+                                <p class="print-note">Each certificate will open a print dialog where you can select your printer and adjust settings.</p>
+                            </div>
+                            
                             <div class="form-group">
                                 <label for="printerSelect">
                                     <i class="fas fa-list"></i>
-                                    Select Printer
+                                    Print Method
                                 </label>
                                 <select id="printerSelect" name="printerSelect">
-                                    <option value="">Loading printers...</option>
+                                    <option value="">Loading options...</option>
                                 </select>
-                                <button type="button" id="refreshPrinters" class="btn-secondary">
-                                    <i class="fas fa-sync-alt"></i> Refresh
-                                </button>
                             </div>
                         </div>
                     </div>
