@@ -6,12 +6,14 @@
 class CertificateGenerator {
     constructor() {
         // Certificate positioning (calibrated for JA Certificate E004)
+        // Coordinates are in points (1 point = 1/72 inch)
+        // Page size is typically 792x612 (landscape) or 612x792 (portrait)
         this.positions = {
-            studentName: { x: 500, y: 480, font: 'Helvetica-Bold', size: 18 },
-            schoolName: { x: 500, y: 253, font: 'Helvetica', size: 14 },
-            date: { x: 500, y: 109, font: 'Helvetica', size: 12 },
-            jaVolunteer: { x: 380, y: 182, font: 'Times-Italic', size: 14 },
-            teacher: { x: 645, y: 182, font: 'Times-Italic', size: 14 }
+            studentName: { x: 396, y: 480, font: 'Helvetica-Bold', size: 18 },     // Center of 792-wide page
+            schoolName: { x: 396, y: 253, font: 'Helvetica', size: 14 },           // Center of 792-wide page  
+            date: { x: 396, y: 109, font: 'Helvetica', size: 12 },                 // Center of 792-wide page
+            jaVolunteer: { x: 300, y: 182, font: 'Times-Italic', size: 14 },       // Left side signature area
+            teacher: { x: 492, y: 182, font: 'Times-Italic', size: 14 }            // Right side signature area
         };
         
         this.templateBuffer = null;
@@ -231,15 +233,29 @@ class CertificateGenerator {
     }
 
     /**
-     * Estimate text width (simplified calculation)
+     * Estimate text width (improved calculation)
      * @param {string} text 
      * @param {string} font 
      * @param {number} size 
      * @returns {number}
      */
     getTextWidth(text, font, size) {
-        // Simple approximation - in production, you'd use more accurate font metrics
-        const averageCharWidth = size * 0.6; // Approximate for most fonts
+        // Improved approximation based on font type
+        let averageCharWidth;
+        
+        switch (font) {
+            case 'Helvetica-Bold':
+                averageCharWidth = size * 0.65; // Bold fonts are wider
+                break;
+            case 'Times-Italic':
+                averageCharWidth = size * 0.55; // Italic fonts are typically narrower
+                break;
+            case 'Helvetica':
+            default:
+                averageCharWidth = size * 0.58; // Standard Helvetica
+                break;
+        }
+        
         return text.length * averageCharWidth;
     }
 

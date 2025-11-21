@@ -429,7 +429,7 @@ class CertificateApp {
     getCertificateInfo() {
         return {
             schoolName: document.getElementById('schoolName').value.trim(),
-            teacherName: document.getElementById('teacherName').value.trim() || null,
+            teacher: document.getElementById('teacherName').value.trim() || null,
             jaVolunteer: document.getElementById('jaVolunteer').value.trim() || null,
             date: document.getElementById('certificateDate').value,
             enablePrinting: document.getElementById('enablePrinting').checked,
