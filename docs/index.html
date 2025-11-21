@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>JA Certificate Generator</title>
+    <link rel="stylesheet" href="css/styles.css?v=1.1">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <i class="fas fa-certificate header-icon"></i>
+                <h1>JA Certificate Generator</h1>
+                <p class="header-subtitle">Generate personalized Junior Achievement certificates</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="form-container">
+                <form id="certificateForm" class="certificate-form">
+                    <!-- Student List Upload Section -->
+                    <div class="form-section">
+                        <h2><i class="fas fa-upload"></i> Student List</h2>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <input type="file" id="studentFile" name="studentFile" accept=".txt,.csv,.docx,.xlsx" hidden>
+                            <div class="upload-content">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <p class="upload-text">Click to upload or drag and drop your student list</p>
+                                <p class="upload-formats">Supported formats: TXT, CSV, DOCX, XLSX</p>
+                                <p class="upload-note">Note: PDF files are not yet supported in the web version</p>
+                                <p class="sample-link">
+                                    <a href="assets/sample-students.txt" download class="sample-download">
+                                        <i class="fas fa-download"></i> Download sample TXT file
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+                        <div id="fileName" class="file-name hidden"></div>
+                        <div id="studentPreview" class="student-preview hidden">
+                            <h3>Student Names Found:</h3>
+                            <p class="preview-instructions">
+                                <i class="fas fa-info-circle"></i>
+                                Review the names below. Click the <i class="fas fa-times"></i> to remove incorrect names, or add new names manually.
+                            </p>
+                            <div id="studentList" class="student-list"></div>
+                            <div class="add-name-section">
+                                <div class="add-name-input">
+                                    <input type="text" id="newNameInput" placeholder="Add a name manually..." maxlength="100">
+                                    <button type="button" id="addNameBtn" class="btn-add-name">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="name-count">
+                                Total names: <span id="nameCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Certificate Information Section -->
+                    <div class="form-section">
+                        <h2><i class="fas fa-info-circle"></i> Certificate Information</h2>
+                        
+                        <div class="form-group">
+                            <label for="schoolName">
+                                <i class="fas fa-school"></i>
+                                School Name
+                            </label>
+                            <input type="text" id="schoolName" name="schoolName" 
+                                   placeholder="Enter school name" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="teacherName">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                    Teacher Name (optional)
+                                </label>
+                                <input type="text" id="teacherName" name="teacherName" 
+                                       placeholder="Enter teacher name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="jaVolunteer">
+                                    <i class="fas fa-user-tie"></i>
+                                    JA Volunteer (optional)
+                                </label>
+                                <input type="text" id="jaVolunteer" name="jaVolunteer" 
+                                       placeholder="Enter JA volunteer name">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="certificateDate">
+                                <i class="fas fa-calendar-alt"></i>
+                                Certificate Date
+                            </label>
+                            <input type="date" id="certificateDate" name="certificateDate" required>
+                        </div>
+                    </div>
+
+                    <!-- Print Options Section -->
+                    <div class="form-section">
+                        <h2><i class="fas fa-print"></i> Print Options</h2>
+                        
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="enablePrinting" name="enablePrinting">
+                            <label for="enablePrinting">
+                                <i class="fas fa-printer"></i>
+                                Print certificates after generation (uses your local printers)
+                            </label>
+                        </div>
+
+                        <div id="printerSection" class="printer-section hidden">
+                            <div class="printer-info">
+                                <h4><i class="fas fa-info-circle"></i> Printing Information</h4>
+                                <p>✅ <strong>Direct access to your local printers</strong></p>
+                                <p>✅ <strong>Uses browser's native print dialog</strong></p>
+                                <p>✅ <strong>Full printer settings and options</strong></p>
+                                <p class="print-note">Each certificate will open a print dialog where you can select your printer and adjust settings.</p>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="printerSelect">
+                                    <i class="fas fa-list"></i>
+                                    Print Method
+                                </label>
+                                <select id="printerSelect" name="printerSelect">
+                                    <option value="">Loading options...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="form-actions">
+                        <button type="button" id="previewBtn" class="btn btn-secondary" disabled>
+                            <i class="fas fa-eye"></i>
+                            Preview Certificates
+                        </button>
+                        <button type="submit" id="generateBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-magic"></i>
+                            Generate Certificates
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Progress Section -->
+            <div id="progressSection" class="progress-section hidden">
+                <div class="progress-header">
+                    <h3><i class="fas fa-cog fa-spin"></i> Generating Certificates...</h3>
+                    <div id="progressText">Preparing...</div>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <div id="progressDetails" class="progress-details"></div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-section hidden">
+                <h3><i class="fas fa-check-circle"></i> Generation Complete!</h3>
+                <div id="resultsContent"></div>
+                <div class="results-actions">
+                    <button type="button" id="downloadAllBtn" class="btn btn-primary">
+                        <i class="fas fa-download"></i>
+                        Download All Certificates
+                    </button>
+                    <button type="button" id="resetBtn" class="btn btn-secondary">
+                        <i class="fas fa-refresh"></i>
+                        Generate New Batch
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 JA Certificate Generator. Built for Junior Achievement programs.</p>
+        </footer>
+    </div>
+
+    <!-- Modal for Preview -->
+    <div id="previewModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-eye"></i> Certificate Preview</h3>
+                <button type="button" id="closeModal" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="js/file-parser.js?v=1.6"></script>
+    <script src="js/certificate-generator.js?v=1.6"></script>
+    <script src="js/print-manager.js?v=1.6"></script>
+    <script src="js/app.js?v=1.6"></script>
+</body>
+</html>

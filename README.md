@@ -1,7 +1,23 @@
-# Certificate Generator - Multi-Format File Reader
+# JA Certificate Generator - Multi-Format File Reader
 
 ## Overview
-This enhanced certificate generator can automatically read student names from various file formats and generate personalized certificates. The project follows Python best practices with a clean, modular structure.
+This enhanced certificate generator can automatically read student names from various file formats and generate personalized certificates. The project provides both a **command-line interface (CLI)** and a **web-based interface** for maximum flexibility and ease of use.
+
+## 🌐 Web Interface
+**NEW!** Access the certificate generator through your web browser:
+**[https://sillgen.github.io/JA-Certificate-Generator](https://sillgen.github.io/JA-Certificate-Generator)**
+
+### Web Interface Features:
+- 📁 **Drag & Drop File Upload** - Support for TXT and CSV files
+- 🎨 **Live Preview** - See certificate details before generation
+- 📱 **Mobile Friendly** - Works on phones, tablets, and computers
+- 🔒 **Privacy First** - All processing happens in your browser
+- 📦 **Batch Download** - Download all certificates as a ZIP file
+- 🖨️ **Print Integration** - Print certificates directly from browser
+- ⚡ **No Installation** - Just open in your browser and use
+
+## 💻 Command Line Interface
+For developers and advanced users, the CLI tool provides full automation capabilities with support for multiple file formats and advanced features.
 
 ## Project Structure
 ```
