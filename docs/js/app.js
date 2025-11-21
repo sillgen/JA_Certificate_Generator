@@ -557,6 +557,9 @@ class CertificateApp {
 
         // Add individual certificate download buttons
         this.addIndividualDownloadButtons(successful);
+        
+        // Add print options if printing was enabled
+        this.addPrintInterface(successful);
     }
 
     /**
@@ -589,6 +592,64 @@ class CertificateApp {
                 const certificate = certificates.find(cert => cert.studentName === studentName);
                 if (certificate) {
                     this.certificateGenerator.downloadCertificate(certificate);
+                }
+            });
+        });
+    }
+
+    /**
+     * Add print interface for certificates
+     */
+    addPrintInterface(certificates) {
+        const enablePrinting = document.getElementById('enablePrinting');
+        if (!enablePrinting.checked || certificates.length === 0) return;
+
+        const resultsContent = document.getElementById('resultsContent');
+        
+        const printSection = document.createElement('div');
+        printSection.className = 'print-interface';
+        printSection.innerHTML = `
+            <div class="print-header">
+                <h4><i class="fas fa-print"></i> Print Certificates</h4>
+                <p>Use your local printer to print the generated certificates</p>
+            </div>
+            <div class="print-options">
+                <button class="btn btn-primary print-all-individual" id="printAllIndividual">
+                    <i class="fas fa-print"></i> Print All (Individual Dialogs)
+                </button>
+                <button class="btn btn-secondary print-all-combined" id="printAllCombined">
+                    <i class="fas fa-file-pdf"></i> Print All (Combined PDF)
+                </button>
+            </div>
+            <div class="print-individual-list">
+                <h5>Print Individual Certificates:</h5>
+                <div class="print-grid">
+                    ${certificates.map(cert => `
+                        <button class="btn btn-outline print-individual" data-student="${cert.studentName}">
+                            <i class="fas fa-print"></i> ${cert.studentName}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        resultsContent.appendChild(printSection);
+
+        // Add event listeners for print buttons
+        document.getElementById('printAllIndividual').addEventListener('click', () => {
+            this.printManager.printAllCertificates(certificates);
+        });
+
+        document.getElementById('printAllCombined').addEventListener('click', () => {
+            this.printManager.printAllCombined(certificates);
+        });
+
+        printSection.querySelectorAll('.print-individual').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const studentName = e.currentTarget.dataset.student;
+                const certificate = certificates.find(cert => cert.studentName === studentName);
+                if (certificate) {
+                    this.printManager.printCertificate(certificate);
                 }
             });
         });
