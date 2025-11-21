@@ -48,6 +48,10 @@ class CertificateGenerator {
         const pdfDoc = await PDFLib.PDFDocument.create();
         const page = pdfDoc.addPage([792, 612]); // Letter size landscape
         
+        // Embed fonts first
+        const titleFont = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+        const bodyFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+        
         // Draw border
         page.drawRectangle({
             x: 50,
@@ -73,6 +77,7 @@ class CertificateGenerator {
             x: 180,
             y: 450,
             size: 36,
+            font: titleFont,
             color: PDFLib.rgb(0, 0, 0.5)
         });
 
@@ -81,6 +86,7 @@ class CertificateGenerator {
             x: 300,
             y: 400,
             size: 16,
+            font: bodyFont,
             color: PDFLib.rgb(0, 0, 0)
         });
 
@@ -97,6 +103,7 @@ class CertificateGenerator {
             x: 180,
             y: 310,
             size: 14,
+            font: bodyFont,
             color: PDFLib.rgb(0, 0, 0)
         });
 
@@ -105,14 +112,14 @@ class CertificateGenerator {
             x: 350,
             y: 280,
             size: 14,
+            font: bodyFont,
             color: PDFLib.rgb(0, 0, 0)
         });
 
         page.drawLine({
-            x: 200,
-            y: 250,
-            width: 392,
-            height: 1,
+            start: { x: 200, y: 250 },
+            end: { x: 592, y: 250 },
+            thickness: 1,
             color: PDFLib.rgb(0, 0, 0)
         });
 
@@ -121,6 +128,7 @@ class CertificateGenerator {
             x: 150,
             y: 180,
             size: 12,
+            font: bodyFont,
             color: PDFLib.rgb(0, 0, 0)
         });
 
@@ -135,6 +143,7 @@ class CertificateGenerator {
             x: 500,
             y: 180,
             size: 12,
+            font: bodyFont,
             color: PDFLib.rgb(0, 0, 0)
         });
 
@@ -150,6 +159,7 @@ class CertificateGenerator {
             x: 350,
             y: 120,
             size: 12,
+            font: bodyFont,
             color: PDFLib.rgb(0, 0, 0)
         });
 
@@ -171,42 +181,54 @@ class CertificateGenerator {
      */
     async generateCertificate(studentName, certificateInfo) {
         try {
+            console.log('Generating certificate for:', studentName, 'with info:', certificateInfo);
+            
             if (!this.templateBuffer) {
+                console.log('Loading template...');
                 await this.loadTemplate();
             }
 
+            console.log('Template buffer size:', this.templateBuffer.byteLength, 'bytes');
             const pdfDoc = await PDFLib.PDFDocument.load(this.templateBuffer);
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];
             
             // Get page dimensions
             const { width, height } = firstPage.getSize();
+            console.log('Page dimensions:', width, 'x', height);
 
             // Student name
+            console.log('Adding student name:', studentName);
             await this.addText(firstPage, studentName, this.positions.studentName, width);
 
             // School name
             if (certificateInfo.schoolName) {
+                console.log('Adding school name:', certificateInfo.schoolName);
                 await this.addText(firstPage, certificateInfo.schoolName, this.positions.schoolName, width);
             }
 
             // Date
             if (certificateInfo.date) {
                 const formattedDate = this.formatDate(certificateInfo.date);
+                console.log('Adding date:', formattedDate);
                 await this.addText(firstPage, formattedDate, this.positions.date, width);
             }
 
             // JA Volunteer
             if (certificateInfo.jaVolunteer) {
+                console.log('Adding JA Volunteer:', certificateInfo.jaVolunteer);
                 await this.addText(firstPage, certificateInfo.jaVolunteer, this.positions.jaVolunteer, width);
             }
 
             // Teacher
             if (certificateInfo.teacher) {
+                console.log('Adding teacher:', certificateInfo.teacher);
                 await this.addText(firstPage, certificateInfo.teacher, this.positions.teacher, width);
             }
 
-            return await pdfDoc.save();
+            const pdfBytes = await pdfDoc.save();
+            console.log('Generated PDF size:', pdfBytes.length, 'bytes');
+            return pdfBytes;
         } catch (error) {
             console.error('Error generating certificate:', error);
             throw new Error(`Failed to generate certificate for ${studentName}: ${error.message}`);
@@ -224,10 +246,35 @@ class CertificateGenerator {
         const textWidth = this.getTextWidth(text, position.font, position.size);
         const centeredX = position.x - (textWidth / 2);
 
+        // Get the appropriate font from PDF-lib
+        const pdfDoc = page.doc;
+        let font;
+        
+        try {
+            switch (position.font) {
+                case 'Helvetica-Bold':
+                    font = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+                    break;
+                case 'Times-Italic':
+                    font = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRomanItalic);
+                    break;
+                case 'Helvetica':
+                default:
+                    font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+                    break;
+            }
+        } catch (fontError) {
+            console.warn('Font loading error, using default:', fontError);
+            font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+        }
+
+        console.log(`Adding text "${text}" at position (${Math.max(50, Math.min(centeredX, pageWidth - textWidth - 50))}, ${position.y})`);
+
         page.drawText(text, {
             x: Math.max(50, Math.min(centeredX, pageWidth - textWidth - 50)), // Keep within margins
             y: position.y,
             size: position.size,
+            font: font,
             color: PDFLib.rgb(0, 0, 0)
         });
     }
