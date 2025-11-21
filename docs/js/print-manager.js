@@ -61,6 +61,61 @@ class PrintManager {
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
 
+            // Method 1: Try opening in new window for better print support
+            console.log('Opening PDF in new window for printing...');
+            const printWindow = window.open(url, '_blank', 'width=800,height=600');
+            
+            if (printWindow) {
+                // Wait for PDF to load in the new window, then trigger print
+                printWindow.onload = () => {
+                    console.log('PDF loaded in new window, triggering print...');
+                    setTimeout(() => {
+                        try {
+                            printWindow.print();
+                            // Clean up after print dialog
+                            setTimeout(() => {
+                                printWindow.close();
+                                URL.revokeObjectURL(url);
+                            }, 1000);
+                        } catch (printError) {
+                            console.error('Print error:', printError);
+                            URL.revokeObjectURL(url);
+                        }
+                    }, 1000);
+                };
+                
+                // Fallback: if window doesn't load properly
+                setTimeout(() => {
+                    if (!printWindow.document || printWindow.document.readyState !== 'complete') {
+                        console.log('New window method failed, trying iframe method...');
+                        printWindow.close();
+                        this.printCertificateViaIframe(pdfBytes, filename, url);
+                    }
+                }, 3000);
+                
+                return Promise.resolve(true);
+            } else {
+                // Popup blocked, fall back to iframe method
+                console.log('Popup blocked, using iframe method...');
+                return this.printCertificateViaIframe(pdfBytes, filename, url);
+            }
+
+        } catch (error) {
+            console.error('Error printing certificate:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fallback method: Print PDF via iframe (original method)
+     */
+    async printCertificateViaIframe(pdfBytes, filename, url = null) {
+        if (!url) {
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            url = URL.createObjectURL(blob);
+        }
+
+        try {
             // Create a hidden iframe to load the PDF
             const iframe = document.createElement('iframe');
             iframe.style.position = 'fixed';
@@ -149,7 +204,7 @@ class PrintManager {
             });
 
         } catch (error) {
-            console.error('Error printing certificate:', error);
+            URL.revokeObjectURL(url);
             throw error;
         }
     }

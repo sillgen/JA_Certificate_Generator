@@ -620,6 +620,9 @@ class CertificateApp {
                 <button class="btn btn-secondary print-all-combined" id="printAllCombined">
                     <i class="fas fa-file-pdf"></i> Print All (Combined PDF)
                 </button>
+                <button class="btn btn-outline download-for-print" id="downloadForPrint">
+                    <i class="fas fa-download"></i> Download All for Manual Print
+                </button>
             </div>
             <div class="print-individual-list">
                 <h5>Print Individual Certificates:</h5>
@@ -642,6 +645,10 @@ class CertificateApp {
 
         document.getElementById('printAllCombined').addEventListener('click', () => {
             this.printManager.printAllCombined(certificates);
+        });
+
+        document.getElementById('downloadForPrint').addEventListener('click', () => {
+            this.downloadAllCertificates();
         });
 
         printSection.querySelectorAll('.print-individual').forEach(btn => {
