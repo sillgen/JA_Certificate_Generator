@@ -17,6 +17,48 @@ class CertificateGenerator {
         };
         
         this.templateBuffer = null;
+        
+        // Test PDF generation on startup
+        this.testPdfGeneration();
+    }
+
+    /**
+     * Test basic PDF generation to verify PDF-lib is working
+     */
+    async testPdfGeneration() {
+        try {
+            console.log('Testing PDF generation...');
+            const pdfDoc = await PDFLib.PDFDocument.create();
+            const page = pdfDoc.addPage([300, 200]);
+            const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+            
+            page.drawText('Test PDF - PDF-lib working!', {
+                x: 50,
+                y: 100,
+                size: 16,
+                font: font,
+                color: PDFLib.rgb(0, 0, 0)
+            });
+            
+            const pdfBytes = await pdfDoc.save();
+            console.log('✅ PDF test successful! Generated', pdfBytes.length, 'bytes');
+            
+            // Make test PDF available globally for debugging
+            window.testPdf = pdfBytes;
+            window.downloadTestPdf = () => {
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'test-pdf.pdf';
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+            console.log('Test PDF available: Run window.downloadTestPdf() in console to download it');
+            
+        } catch (error) {
+            console.error('❌ PDF generation test failed:', error);
+        }
     }
 
     /**
