@@ -7,6 +7,12 @@ class PrintManager {
     constructor() {
         this.availablePrinters = [];
         this.selectedPrinter = null;
+        
+        // Check if PDF-lib is available for combining PDFs
+        this.canCombinePdfs = !!window.PDFLib;
+        if (!this.canCombinePdfs) {
+            console.warn('PDF-lib not available - combined printing will be limited');
+        }
     }
 
     /**
@@ -202,7 +208,20 @@ class PrintManager {
             return false;
         }
 
-        // Show options for printing
+        // Check if combined printing is available
+        if (!this.canCombinePdfs) {
+            const message = `PDF combining library not available.\n\n` +
+                          `Certificates will be printed individually.\n` +
+                          `Each certificate will open a separate print dialog.\n\n` +
+                          `Continue with individual printing?`;
+            
+            if (confirm(message)) {
+                return await this.printAllIndividually(successfulCerts);
+            }
+            return false;
+        }
+
+        // Show options for printing if PDF-lib is available
         const printOption = this.showPrintOptions(successfulCerts.length);
         
         if (printOption === 'cancel') {
@@ -222,23 +241,26 @@ class PrintManager {
      * @returns {string}
      */
     showPrintOptions(certCount) {
-        const message = `Choose how to print ${certCount} certificates:\n\n` +
-                       `1. Print All Together (Recommended)\n` +
-                       `   - All certificates in one print job\n` +
-                       `   - Select printer once\n` +
-                       `   - Easier to manage\n\n` +
-                       `2. Print One by One\n` +
-                       `   - Each certificate prints separately\n` +
-                       `   - More control over individual prints\n` +
-                       `   - Takes longer\n\n` +
-                       `3. Cancel`;
+        const message = `How would you like to print ${certCount} certificates?\n\n` +
+                       `Option 1: Print All Together (RECOMMENDED)\n` +
+                       `• Combines all certificates into one PDF document\n` +
+                       `• Single print job with one printer selection\n` +
+                       `• Faster and easier to manage\n` +
+                       `• Best for printing to the same printer\n\n` +
+                       `Option 2: Print One by One\n` +
+                       `• Each certificate opens a separate print dialog\n` +
+                       `• Individual printer selection for each certificate\n` +
+                       `• More control but takes longer\n` +
+                       `• Good if you need different settings per certificate\n\n` +
+                       `Option 3: Cancel printing`;
 
-        const choice = prompt(message + '\n\nEnter 1, 2, or 3:');
+        const choice = prompt(message + '\n\nEnter 1, 2, or 3:', '1');
         
         switch (choice) {
             case '1': return 'combined';
             case '2': return 'individual';
             case '3': 
+            case null: // User clicked Cancel
             default: return 'cancel';
         }
     }
@@ -246,22 +268,57 @@ class PrintManager {
     /**
      * Print all certificates combined in one document
      * @param {Object[]} certificates 
+     * @param {Function} progressCallback Optional progress callback
      * @returns {Promise<boolean>}
      */
-    async printAllCombined(certificates) {
+    async printAllCombined(certificates, progressCallback = null) {
         try {
+            // Show initial progress
+            if (progressCallback) {
+                progressCallback({
+                    message: 'Starting PDF combination...',
+                    current: 0,
+                    total: certificates.length
+                });
+            }
+            
             // Create a combined PDF with all certificates
-            const combinedPdf = await this.createCombinedPdf(certificates);
+            const combinedPdf = await this.createCombinedPdf(certificates, progressCallback);
+            
+            // Show final progress
+            if (progressCallback) {
+                progressCallback({
+                    message: 'Combined PDF ready for printing!',
+                    current: certificates.length,
+                    total: certificates.length
+                });
+            }
+            
+            // Show success message before printing
+            const printMsg = `Combined PDF created successfully!\n\n` +
+                           `• ${certificates.length} certificates combined\n` +
+                           `• Total pages: ${certificates.length}\n` +
+                           `• Ready to print\n\n` +
+                           `The print dialog will now open. Select your printer and print settings.`;
+            
+            alert(printMsg);
             
             // Print the combined PDF
             await this.printCertificate(combinedPdf, 'all-certificates.pdf');
             
-            alert(`Successfully prepared ${certificates.length} certificates for printing.`);
             return true;
             
         } catch (error) {
             console.error('Error printing combined certificates:', error);
-            alert(`Error printing certificates: ${error.message}`);
+            
+            // Show user-friendly error with fallback option
+            const errorMsg = `Error creating combined PDF: ${error.message}\n\n` +
+                           `Would you like to try printing certificates individually instead?`;
+            
+            if (confirm(errorMsg)) {
+                return await this.printAllIndividually(certificates);
+            }
+            
             return false;
         }
     }
@@ -269,12 +326,69 @@ class PrintManager {
     /**
      * Create a combined PDF with all certificates
      * @param {Object[]} certificates 
+     * @param {Function} progressCallback Optional progress callback
      * @returns {Promise<Uint8Array>}
      */
-    async createCombinedPdf(certificates) {
-        // This would require PDFLib to merge multiple PDFs
-        // For now, we'll just print them individually
-        throw new Error('Combined PDF printing not yet implemented. Please use individual printing.');
+    async createCombinedPdf(certificates, progressCallback = null) {
+        try {
+            console.log(`Creating combined PDF with ${certificates.length} certificates...`);
+            
+            if (!window.PDFLib) {
+                throw new Error('PDF-lib not available for combining PDFs');
+            }
+
+            // Create a new PDF document for the combined output
+            const combinedPdf = await PDFLib.PDFDocument.create();
+
+            for (let i = 0; i < certificates.length; i++) {
+                const cert = certificates[i];
+                console.log(`Adding certificate ${i + 1}: ${cert.studentName}`);
+
+                // Update progress
+                if (progressCallback) {
+                    progressCallback({
+                        message: `Adding certificate for ${cert.studentName}...`,
+                        current: i + 1,
+                        total: certificates.length
+                    });
+                }
+
+                try {
+                    // Load the individual certificate PDF
+                    const certPdf = await PDFLib.PDFDocument.load(cert.pdfBytes);
+                    
+                    // Copy all pages from the certificate to the combined PDF
+                    const pages = await combinedPdf.copyPages(certPdf, certPdf.getPageIndices());
+                    
+                    // Add each page to the combined document
+                    pages.forEach(page => combinedPdf.addPage(page));
+                    
+                } catch (error) {
+                    console.error(`Error adding certificate for ${cert.studentName}:`, error);
+                    // Continue with other certificates even if one fails
+                }
+
+                // Small delay to prevent blocking the UI
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+
+            console.log('Combined PDF created successfully');
+            
+            // Final progress update
+            if (progressCallback) {
+                progressCallback({
+                    message: 'Saving combined PDF...',
+                    current: certificates.length,
+                    total: certificates.length
+                });
+            }
+            
+            return await combinedPdf.save();
+            
+        } catch (error) {
+            console.error('Error creating combined PDF:', error);
+            throw new Error(`Failed to create combined PDF: ${error.message}`);
+        }
     }
 
     /**
