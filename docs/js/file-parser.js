@@ -14,6 +14,25 @@ class FileParser {
             'application/vnd.ms-excel': this.parseXlsxFile.bind(this),
             'text/comma-separated-values': this.parseCsvFile.bind(this)
         };
+        
+        // Check library availability on construction
+        this.checkLibraries();
+    }
+
+    /**
+     * Check if required libraries are loaded
+     */
+    checkLibraries() {
+        console.log('FileParser library check:');
+        console.log('- Mammoth.js (DOCX):', !!window.mammoth);
+        console.log('- XLSX.js (Excel):', !!window.XLSX);
+        
+        if (!window.mammoth) {
+            console.warn('Mammoth.js not loaded - DOCX files will not be supported');
+        }
+        if (!window.XLSX) {
+            console.warn('XLSX.js not loaded - Excel files will not be supported');
+        }
     }
 
     /**
@@ -27,6 +46,7 @@ class FileParser {
             console.log(`Parsing ${fileType} file: ${file.name}`);
             
             if (!this.supportedFormats[fileType]) {
+                console.log('Unsupported file type, trying as text...');
                 // Try to parse as text for unknown types
                 return await this.parseTextFile(file);
             }
@@ -34,8 +54,37 @@ class FileParser {
             return await this.supportedFormats[fileType](file);
         } catch (error) {
             console.error('Error parsing file:', error);
+            
+            // Special handling for DOCX files - try alternative approach
+            if (file.name.toLowerCase().endsWith('.docx') && !error.message.includes('Library not loaded')) {
+                console.log('DOCX parsing failed, trying alternative approach...');
+                try {
+                    return await this.parseDocxAlternative(file);
+                } catch (altError) {
+                    console.error('Alternative DOCX parsing also failed:', altError);
+                }
+            }
+            
             throw new Error(`Failed to parse file: ${error.message}`);
         }
+    }
+
+    /**
+     * Alternative DOCX parsing approach (fallback)
+     * @param {File} file 
+     * @returns {Promise<string[]>}
+     */
+    async parseDocxAlternative(file) {
+        // This is a fallback that suggests manual conversion
+        const message = `DOCX file parsing encountered an issue. To proceed:\n\n` +
+                       `1. Open your DOCX file in Microsoft Word or Google Docs\n` +
+                       `2. Select all text (Ctrl+A)\n` +
+                       `3. Copy the text (Ctrl+C)\n` +
+                       `4. Paste into a new text file and save as ${file.name.replace('.docx', '.txt')}\n` +
+                       `5. Upload the TXT file instead\n\n` +
+                       `Alternatively, try re-saving your DOCX file in a newer format.`;
+        
+        throw new Error(message);
     }
 
     /**
@@ -44,22 +93,33 @@ class FileParser {
      * @returns {string} MIME type or best guess
      */
     detectFileType(file) {
-        if (file.type) {
+        console.log('Detecting file type for:', file.name);
+        console.log('File MIME type:', file.type);
+        console.log('File size:', file.size);
+        
+        // First try the MIME type if it's available and recognized
+        if (file.type && this.supportedFormats[file.type]) {
+            console.log('Using MIME type:', file.type);
             return file.type;
         }
 
         // Fallback based on file extension
         const extension = file.name.toLowerCase().split('.').pop();
+        console.log('File extension:', extension);
+        
         const extensionMap = {
             'txt': 'text/plain',
             'csv': 'text/csv',
             'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'doc': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Treat .doc as .docx for now
             'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'pdf': 'application/pdf',
-            'xls': 'application/vnd.ms-excel'
+            'xls': 'application/vnd.ms-excel',
+            'pdf': 'application/pdf'
         };
 
-        return extensionMap[extension] || 'text/plain';
+        const detectedType = extensionMap[extension] || 'text/plain';
+        console.log('Detected type by extension:', detectedType);
+        return detectedType;
     }
 
     /**
@@ -108,29 +168,52 @@ class FileParser {
      */
     async parseDocxFile(file) {
         try {
+            console.log('Attempting to parse DOCX file:', file.name);
+            console.log('Mammoth available:', !!window.mammoth);
+            
             if (!window.mammoth) {
-                throw new Error('DOCX parser not available. Please convert to TXT or CSV format.');
+                console.error('Mammoth.js library not loaded');
+                throw new Error('DOCX parser not available. Please ensure you have a stable internet connection and try refreshing the page, or convert to TXT or CSV format.');
             }
 
+            console.log('Converting file to array buffer...');
             // Convert file to array buffer
             const arrayBuffer = await this.readFileAsArrayBuffer(file);
+            console.log('Array buffer size:', arrayBuffer.byteLength);
             
+            console.log('Extracting text from DOCX...');
             // Extract text from DOCX
             const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            
+            console.log('Mammoth result:', result);
             
             if (result.messages && result.messages.length > 0) {
                 console.warn('DOCX parsing warnings:', result.messages);
             }
             
             if (!result.value || result.value.trim().length === 0) {
-                throw new Error('No text content found in DOCX file');
+                throw new Error('No text content found in DOCX file. The file might be empty or corrupted.');
             }
 
-            return this.extractNamesFromText(result.value);
+            console.log('Extracted text length:', result.value.length);
+            console.log('First 200 chars of text:', result.value.substring(0, 200));
+
+            const names = this.extractNamesFromText(result.value);
+            console.log('Extracted names:', names);
+            
+            return names;
             
         } catch (error) {
             console.error('Error parsing DOCX file:', error);
-            throw new Error(`Failed to parse DOCX file: ${error.message}. Please try converting to TXT or CSV format.`);
+            
+            // Provide more specific error messages
+            if (error.message.includes('not available') || error.message.includes('mammoth')) {
+                throw new Error(`DOCX parsing failed: Library not loaded. Please refresh the page and try again, or convert your DOCX file to TXT format.`);
+            } else if (error.message.includes('corrupted') || error.message.includes('format')) {
+                throw new Error(`DOCX parsing failed: File appears to be corrupted or in an unsupported format. Please try saving your document as a newer DOCX format or convert to TXT.`);
+            } else {
+                throw new Error(`DOCX parsing failed: ${error.message}. Try converting your DOCX file to TXT or CSV format.`);
+            }
         }
     }
 

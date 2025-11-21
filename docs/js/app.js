@@ -23,6 +23,25 @@ class CertificateApp {
         this.setupDateDefault();
         await this.loadPrinters();
         await this.certificateGenerator.loadTemplate();
+        
+        // Check library availability and show status
+        this.checkLibraryStatus();
+    }
+
+    /**
+     * Check and display library loading status
+     */
+    checkLibraryStatus() {
+        console.log('Checking library status...');
+        console.log('PDF-lib:', !!window.PDFLib);
+        console.log('JSZip:', !!window.JSZip);
+        console.log('Mammoth:', !!window.mammoth);
+        console.log('XLSX:', !!window.XLSX);
+        
+        // You could add a small status indicator to the UI if needed
+        if (!window.mammoth || !window.XLSX) {
+            console.warn('Some libraries may not have loaded properly. DOCX/XLSX support may be limited.');
+        }
     }
 
     /**
@@ -171,7 +190,22 @@ class CertificateApp {
 
         } catch (error) {
             console.error('Error processing file:', error);
-            alert(`Error processing file: ${error.message}`);
+            
+            // Show a more user-friendly error message
+            let errorMessage = error.message;
+            
+            // Check if it's a library loading issue
+            if (errorMessage.includes('not available') || errorMessage.includes('Library not loaded')) {
+                errorMessage = `Library Loading Issue: ${errorMessage}\n\nThis might be due to:\n• Slow internet connection\n• Browser blocking external resources\n• Ad blocker interfering\n\nSolutions:\n1. Refresh the page and try again\n2. Disable ad blocker for this site\n3. Convert your file to TXT format as a workaround`;
+            }
+            
+            // For DOCX alternative message, show as a more formatted alert
+            if (errorMessage.includes('To proceed:')) {
+                this.showDetailedError('DOCX Conversion Needed', errorMessage);
+            } else {
+                alert(`Error processing file: ${errorMessage}`);
+            }
+            
             this.hideLoading();
         }
     }
@@ -514,6 +548,15 @@ class CertificateApp {
     hideLoading() {
         // Hide loading overlay
         console.log('Loading complete');
+    }
+
+    /**
+     * Show a detailed error message in a better format
+     */
+    showDetailedError(title, message) {
+        // For now, use a formatted alert. In the future, could use a modal
+        const formattedMessage = `${title}\n\n${message.replace(/\n/g, '\n')}`;
+        alert(formattedMessage);
     }
 }
 
