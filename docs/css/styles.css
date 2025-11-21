@@ -186,14 +186,30 @@ body {
 
 .student-preview h3 {
     color: #495057;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     font-size: 1.1rem;
+}
+
+.preview-instructions {
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    border-left: 3px solid #2196f3;
 }
 
 .student-list {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    margin-bottom: 15px;
+    min-height: 40px;
+    padding: 10px;
+    border: 1px dashed #dee2e6;
+    border-radius: 6px;
+    background: #fafafa;
 }
 
 .student-name {
@@ -203,6 +219,113 @@ body {
     border-radius: 20px;
     font-size: 0.9rem;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    cursor: default;
+}
+
+.student-name:hover {
+    background: #5a6fd8;
+    transform: translateY(-1px);
+}
+
+.student-name .remove-name {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    transition: all 0.2s ease;
+}
+
+.student-name .remove-name:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.add-name-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.add-name-input {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.add-name-input input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.add-name-input input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.btn-add-name {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.3s ease;
+}
+
+.btn-add-name:hover {
+    background: #218838;
+}
+
+.btn-add-name:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+.name-count {
+    margin-top: 15px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #495057;
+    text-align: center;
+    font-weight: 500;
+}
+
+.name-count span {
+    color: #667eea;
+    font-weight: bold;
+}
+
+.no-names-message {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+    border: 2px dashed #dee2e6;
+    border-radius: 6px;
+    background: white;
+    width: 100%;
 }
 
 /* Form Elements */

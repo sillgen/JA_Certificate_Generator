@@ -40,7 +40,22 @@
                         <div id="fileName" class="file-name hidden"></div>
                         <div id="studentPreview" class="student-preview hidden">
                             <h3>Student Names Found:</h3>
+                            <p class="preview-instructions">
+                                <i class="fas fa-info-circle"></i>
+                                Review the names below. Click the <i class="fas fa-times"></i> to remove incorrect names, or add new names manually.
+                            </p>
                             <div id="studentList" class="student-list"></div>
+                            <div class="add-name-section">
+                                <div class="add-name-input">
+                                    <input type="text" id="newNameInput" placeholder="Add a name manually..." maxlength="100">
+                                    <button type="button" id="addNameBtn" class="btn-add-name">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="name-count">
+                                Total names: <span id="nameCount">0</span>
+                            </div>
                         </div>
                     </div>
 

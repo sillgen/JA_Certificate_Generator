@@ -84,6 +84,17 @@ class CertificateApp {
         const resetBtn = document.getElementById('resetBtn');
         resetBtn.addEventListener('click', this.resetApplication.bind(this));
 
+        // Add name functionality
+        const addNameBtn = document.getElementById('addNameBtn');
+        addNameBtn.addEventListener('click', this.addName.bind(this));
+
+        const newNameInput = document.getElementById('newNameInput');
+        newNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.addName();
+            }
+        });
+
         // Click outside modal to close
         const modal = document.getElementById('previewModal');
         modal.addEventListener('click', (e) => {
@@ -176,15 +187,20 @@ class CertificateApp {
             fileNameDiv.classList.remove('hidden');
 
             // Parse the file
-            this.studentNames = await this.fileParser.parseFile(file);
+            const foundNames = await this.fileParser.parseFile(file);
             
-            if (this.studentNames.length === 0) {
-                throw new Error('No student names found in the file');
+            if (foundNames.length === 0) {
+                // Still show preview even with no names so user can add manually
+                this.studentNames = [];
+                this.displayStudentPreview([]);
+                alert('No student names were automatically detected in the file. You can add names manually using the form below.');
+            } else {
+                // Show preview with found names
+                this.displayStudentPreview(foundNames);
             }
-
-            // Show preview of students
-            this.displayStudentPreview(this.studentNames);
-            this.enableGenerateButton();
+            
+            // Always enable the interface for manual editing
+            this.updateButtonStates();
             
             this.hideLoading();
 
@@ -211,31 +227,126 @@ class CertificateApp {
     }
 
     /**
-     * Display preview of found student names
+     * Display preview of found student names with edit capabilities
      */
     displayStudentPreview(names) {
-        const preview = document.getElementById('studentPreview');
-        const studentList = document.getElementById('studentList');
+        this.studentNames = [...names]; // Store a copy
+        this.renderStudentList();
         
-        studentList.innerHTML = '';
-        names.forEach(name => {
-            const span = document.createElement('span');
-            span.className = 'student-name';
-            span.textContent = name;
-            studentList.appendChild(span);
-        });
-
+        const preview = document.getElementById('studentPreview');
         preview.classList.remove('hidden');
     }
 
     /**
-     * Enable the generate button
+     * Render the student list with edit capabilities
      */
-    enableGenerateButton() {
+    renderStudentList() {
+        const studentList = document.getElementById('studentList');
+        const nameCount = document.getElementById('nameCount');
+        
+        studentList.innerHTML = '';
+        
+        if (this.studentNames.length === 0) {
+            studentList.innerHTML = '<div class="no-names-message">No names found. Add names manually below.</div>';
+        } else {
+            this.studentNames.forEach((name, index) => {
+                const nameElement = document.createElement('div');
+                nameElement.className = 'student-name';
+                nameElement.innerHTML = `
+                    <span class="name-text">${name}</span>
+                    <button class="remove-name" title="Remove this name" data-index="${index}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                // Add remove event listener
+                const removeBtn = nameElement.querySelector('.remove-name');
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.removeName(index);
+                });
+                
+                studentList.appendChild(nameElement);
+            });
+        }
+        
+        // Update count
+        nameCount.textContent = this.studentNames.length;
+        
+        // Update button states
+        this.updateButtonStates();
+    }
+
+    /**
+     * Remove a name from the list
+     */
+    removeName(index) {
+        if (index >= 0 && index < this.studentNames.length) {
+            const removedName = this.studentNames[index];
+            this.studentNames.splice(index, 1);
+            this.renderStudentList();
+            
+            console.log(`Removed name: ${removedName}`);
+        }
+    }
+
+    /**
+     * Add a new name manually
+     */
+    addName() {
+        const newNameInput = document.getElementById('newNameInput');
+        const newName = newNameInput.value.trim();
+        
+        if (!newName) {
+            alert('Please enter a name to add.');
+            return;
+        }
+        
+        // Check for duplicates
+        if (this.studentNames.includes(newName)) {
+            alert('This name is already in the list.');
+            newNameInput.value = '';
+            return;
+        }
+        
+        // Validate name format
+        if (!this.isValidName(newName)) {
+            alert('Please enter a valid name (first and last name with letters only).');
+            return;
+        }
+        
+        // Add the name
+        this.studentNames.push(newName);
+        this.renderStudentList();
+        
+        // Clear input
+        newNameInput.value = '';
+        newNameInput.focus();
+        
+        console.log(`Added name: ${newName}`);
+    }
+
+    /**
+     * Validate if a name is in the correct format
+     */
+    isValidName(name) {
+        // Basic validation: should have at least 2 words, letters and common characters only
+        const namePattern = /^[a-zA-Z\s\-'\.]{2,}$/;
+        const words = name.split(/\s+/).filter(word => word.length > 0);
+        
+        return namePattern.test(name) && words.length >= 2 && name.length <= 100;
+    }
+
+    /**
+     * Update button states based on current data
+     */
+    updateButtonStates() {
         const generateBtn = document.getElementById('generateBtn');
         const previewBtn = document.getElementById('previewBtn');
-        generateBtn.disabled = false;
-        previewBtn.disabled = false;
+        const hasNames = this.studentNames.length > 0;
+        
+        generateBtn.disabled = !hasNames;
+        previewBtn.disabled = !hasNames;
     }
 
     /**
@@ -519,6 +630,9 @@ class CertificateApp {
         form.reset();
         this.setupDateDefault();
 
+        // Clear add name input
+        document.getElementById('newNameInput').value = '';
+
         // Hide sections
         document.getElementById('fileName').classList.add('hidden');
         document.getElementById('studentPreview').classList.add('hidden');
@@ -529,9 +643,8 @@ class CertificateApp {
         // Show form
         document.querySelector('.form-container').style.display = 'block';
 
-        // Disable buttons
-        document.getElementById('generateBtn').disabled = true;
-        document.getElementById('previewBtn').disabled = true;
+        // Update button states
+        this.updateButtonStates();
     }
 
     /**
