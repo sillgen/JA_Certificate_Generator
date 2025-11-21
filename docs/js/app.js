@@ -649,7 +649,7 @@ class CertificateApp {
                 const studentName = e.currentTarget.dataset.student;
                 const certificate = certificates.find(cert => cert.studentName === studentName);
                 if (certificate) {
-                    this.printManager.printCertificate(certificate);
+                    this.printManager.printCertificate(certificate.pdfBytes, certificate.filename);
                 }
             });
         });

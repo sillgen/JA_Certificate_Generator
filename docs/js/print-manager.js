@@ -55,6 +55,8 @@ class PrintManager {
      */
     async printCertificate(pdfBytes, filename, printerName = null) {
         try {
+            console.log('Printing certificate:', filename, 'Size:', pdfBytes.length, 'bytes');
+            
             // Create blob URL for the PDF
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
@@ -67,47 +69,83 @@ class PrintManager {
             iframe.style.width = '0';
             iframe.style.height = '0';
             iframe.style.border = 'none';
-            iframe.src = url;
+            iframe.style.visibility = 'hidden';
 
-            // Add iframe to document
+            // Add iframe to document first
             document.body.appendChild(iframe);
 
             return new Promise((resolve, reject) => {
-                iframe.onload = () => {
+                let timeout;
+                let cleaned = false;
+
+                const cleanup = () => {
+                    if (cleaned) return;
+                    cleaned = true;
+                    
+                    if (timeout) clearTimeout(timeout);
+                    
                     try {
-                        // Wait a moment for PDF to fully load
-                        setTimeout(() => {
-                            // Use the iframe's contentWindow to trigger print
-                            if (iframe.contentWindow) {
-                                iframe.contentWindow.print();
-                            } else {
-                                // Fallback: print the current window (less ideal)
-                                window.print();
-                            }
-
-                            // Clean up after a delay
-                            setTimeout(() => {
-                                document.body.removeChild(iframe);
-                                URL.revokeObjectURL(url);
-                            }, 1000);
-
-                            resolve(true);
-                        }, 1000);
-                    } catch (error) {
-                        console.error('Error printing:', error);
-                        // Clean up on error
-                        document.body.removeChild(iframe);
+                        if (iframe.parentNode) {
+                            document.body.removeChild(iframe);
+                        }
                         URL.revokeObjectURL(url);
+                    } catch (e) {
+                        console.warn('Cleanup error:', e);
+                    }
+                };
+
+                iframe.onload = () => {
+                    console.log('PDF loaded in iframe, attempting to print...');
+                    
+                    try {
+                        // Wait for PDF to fully render
+                        setTimeout(() => {
+                            try {
+                                // Use the iframe's contentWindow to trigger print
+                                if (iframe.contentWindow) {
+                                    console.log('Calling print on iframe content...');
+                                    iframe.contentWindow.print();
+                                } else {
+                                    console.log('No contentWindow, falling back to window.print()');
+                                    window.print();
+                                }
+
+                                // Clean up after print dialog is triggered
+                                setTimeout(() => {
+                                    cleanup();
+                                    resolve(true);
+                                }, 2000);
+
+                            } catch (printError) {
+                                console.error('Print error:', printError);
+                                cleanup();
+                                reject(printError);
+                            }
+                        }, 1500); // Increased delay for PDF rendering
+                        
+                    } catch (error) {
+                        console.error('Error in onload handler:', error);
+                        cleanup();
                         reject(error);
                     }
                 };
 
                 iframe.onerror = (error) => {
                     console.error('Error loading PDF for printing:', error);
-                    document.body.removeChild(iframe);
-                    URL.revokeObjectURL(url);
+                    cleanup();
                     reject(new Error('Failed to load PDF for printing'));
                 };
+
+                // Set timeout to prevent hanging
+                timeout = setTimeout(() => {
+                    console.error('PDF loading timeout');
+                    cleanup();
+                    reject(new Error('PDF loading timeout'));
+                }, 10000);
+
+                // Load the PDF
+                iframe.src = url;
+                console.log('Loading PDF in iframe:', url);
             });
 
         } catch (error) {
